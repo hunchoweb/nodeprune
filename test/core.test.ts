@@ -219,3 +219,29 @@ test('CLI summarizes permission warnings by default and exposes details with --v
     }
   } finally { await chmod(blocked, 0o755); }
 });
+
+test('commands without paths scan only the working directory, including nested projects', async t => {
+  const root = await fixture(t);
+  const other = await fixture(t);
+  const old = await project(root, 'current-old-project');
+  await age(old, 60);
+  await project(root, 'nested/active-project');
+  await project(other, 'outside-scan-root');
+  const cli = path.resolve('dist/cli.js');
+  const run = (...args: string[]) => exec(process.execPath, [cli, ...args], { cwd: root });
+  const report = await run('scan');
+  assert.match(report.stdout, /2 projects scanned/);
+  assert.match(report.stdout, /current-old-project/);
+  assert.match(report.stdout, /nested\/active-project/);
+  assert.doesNotMatch(report.stdout, /outside-scan-root/);
+  const selection = await run();
+  assert.match(selection.stdout, /current-old-project/);
+  assert.match(selection.stdout, /Nothing was deleted/);
+  const preview = await run('clean', '--older-than', '30', '--yes', '--dry-run');
+  assert.match(preview.stdout, /1 eligible directory/);
+  assert.ok(await lstat(path.join(old, 'node_modules')));
+  await run('clean', '--older-than', '30', '--yes');
+  await assert.rejects(lstat(path.join(old, 'node_modules')), { code: 'ENOENT' });
+  assert.ok(await lstat(path.join(root, 'nested', 'active-project', 'node_modules')));
+  assert.ok(await lstat(path.join(other, 'outside-scan-root', 'node_modules')));
+});

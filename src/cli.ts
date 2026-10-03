@@ -12,25 +12,25 @@ function days(value: string): number {
 const program = new Command();
 program.configureHelp({ showGlobalOptions: true });
 program.name('nclean').description('Clean up forgotten Node.js dependencies.').version('0.1.0')
-  .argument('[paths...]', 'Project directories (defaults: ~/Projects, ~/Code, ~/Developer, ~/dev)')
+  .argument('[paths...]', 'Directories to scan (default: current directory)')
   .option('--older-than <days>', 'Only include projects inactive for at least this many days', days)
   .option('--dry-run', 'Preview candidates; never delete anything')
   .option('--verbose', 'Show detailed scan warnings and unreadable paths')
-  .addHelpText('after', `\nExamples:\n  nclean                             Select dependencies interactively\n  nclean ~/Projects ~/Code           Scan specific directories\n  nclean --dry-run --older-than 30    Preview old dependencies\n  nclean scan ~/Projects             Report only\n  nclean clean ~/Projects --older-than 30\n  nclean clean ~/Projects --older-than 30 --yes\n\nDefault scans include all ages; nothing is preselected.\nCleanup always requires confirmation unless clean --yes is explicit.\nSizes are file bytes, not a guarantee of physical free disk space.\n`)
+  .addHelpText('after', `\nExamples:\n  nclean                             Select dependencies in the current directory\n  nclean ~/Projects ~/Code           Scan specific directories\n  nclean --dry-run --older-than 30    Preview old dependencies\n  nclean scan ~/Projects             Report only\n  nclean clean ~/Projects --older-than 30\n  nclean clean ~/Projects --older-than 30 --yes\n\nWithout paths, scans the current directory and nested projects.\nIncludes all ages unless --older-than is set; nothing is preselected.\nCleanup always requires confirmation unless clean --yes is explicit.\nSizes are file bytes, not a guarantee of physical free disk space.\n`)
   .action(async (paths: string[], options: Options) => {
     banner();
     const result = await scan(paths, options);
     if (result.entries.length) await clean(result.entries, options, true);
   });
 program.command('scan').description('Find dependencies and report their sizes without deleting')
-  .argument('[paths...]', 'Project directories')
+  .argument('[paths...]', 'Directories to scan (default: current directory)')
   .action(async (paths: string[], _options: unknown, command: Command) => {
     banner();
     const result = await scan(paths, command.optsWithGlobals<Options>());
     if (result.entries.length) table(result.entries);
   });
 program.command('clean').description('Print matching directories and confirm bulk deletion')
-  .argument('[paths...]', 'Project directories')
+  .argument('[paths...]', 'Directories to scan (default: current directory)')
   .option('-y, --yes', 'Explicitly authorize deletion without a prompt')
   .action(async (paths: string[], _options: unknown, command: Command) => {
     banner();

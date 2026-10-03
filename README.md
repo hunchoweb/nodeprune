@@ -1,111 +1,170 @@
+<div align="center">
+
 # nclean
 
-**Clean up forgotten Node.js dependencies.**
+**Node modules cleanup, without the drama.**
 
-Old side projects, client work, and abandoned experiments leave behind a lot of `node_modules`. Find them, see what they cost, and remove the dependencies you no longer need. Keep your projects ready to return to.
+Find forgotten dependencies. Reclaim their space. Keep your projects.
 
-nclean is a focused, cross-platform Node.js CLI for macOS, Linux, and Windows. It cleans project `node_modules` directories only.
+[Quick start](#quick-start) · [Commands](#commands) · [Safety](#safety) · [Development](#development)
 
-## A quick demo
-
-Illustrative output (sizes vary by machine):
+</div>
 
 ```text
-$ nclean ~/Projects
-
-nclean
-Clean up forgotten Node.js dependencies.
-
-Found 14 Node.js projects
-Found 9 node_modules directories
-
-Select dependencies to remove
- ◯ ~/Projects/shelf        2.1 GB   47 days ago   pnpm
- ◉ ~/Projects/old-client   3.4 GB   94 days ago   npm
- ◯ ~/Projects/transfa      1.2 GB   12 days ago   bun
-
-↑/↓ navigate · Space select · A select all · Enter continue · Esc cancel
-
-You are about to delete:
-  ~/Projects/old-client/node_modules
-    3.4 GB · last active 94 days ago · npm
-
-Your project files and lockfiles will NOT be deleted.
-
-? Continue? (y/N)
+                       __
+    ____     _____    / /      ____     ____     ____
+   / __ \   / ___/   / /      / __ \   / __ |   / __ \
+  / / / /  / /__    / /__    / ____/  / /_/ /  / / / /
+  /_/ /_/  \____/   \___/    \___/    \__,_/   /_/ /_/
 ```
 
-Nothing is preselected. You choose the projects, review the exact directories, and confirm.
+Old side projects, finished client work, abandoned experiments: each can leave thousands of dependency files behind. **nclean finds `node_modules`, shows what they cost, and lets you choose what to remove.** Your source, manifests, lockfiles, and Git history stay in place.
 
-## Install
+Built with TypeScript for Node.js 22+ · macOS / Linux / Windows · MIT
 
-Requires **Node.js 22 or newer**.
+## Quick start
 
-Once published to npm:
-
-```sh
-npm install --global nclean
-nclean --help
-```
-
-Run the local checkout today, without a global install:
+From a checkout of this repository:
 
 ```sh
 npm install
 npm run build
-node dist/cli.js --help
-npm run dev -- scan ~/Projects
+npm link
 ```
 
-To try the global command from this checkout:
+Then go to a project or the directory that holds your projects:
 
 ```sh
-npm link
+cd ~/Code
 nclean
 ```
 
-## Usage
+**No path required.** nclean scans the directory you ran it from, including nested projects. A path overrides that default:
 
 ```sh
-nclean                                    # Interactive selection
-nclean ~/Projects                         # A specific directory
-nclean ~/Projects ~/Code                  # Multiple directories
-nclean scan ~/Projects                    # Report only; no deletion
-nclean --dry-run ~/Projects                # Preview only; no prompts or deletion
-nclean --older-than 30 ~/Projects          # At least 30 days inactive
-nclean clean ~/Projects --older-than 30    # Review and confirm all matches
-nclean clean ~/Projects --older-than 30 --yes # Explicit unattended cleanup
-nclean clean ~/Projects --older-than 30 --yes --dry-run
-nclean --help
+nclean ~/Projects
+nclean ~/Code ~/Work
 ```
 
-Options work before or after the subcommand. `--older-than` accepts non-negative whole days, including `30`, `60`, and `90`.
+Without a global link, use `node /path/to/nclean/dist/cli.js` from the directory you want to scan. `npm run dev` runs the TypeScript source from this checkout.
 
-With no paths, nclean scans existing `Projects`, `Code`, `Developer`, and `dev` directories under your home directory. If none exist, it asks you to provide a path. It never defaults to your whole home directory or filesystem. Overlapping roots are deduplicated.
+After the first npm release, installation will also be available with:
 
-The default selection includes all ages. Use `--older-than` to narrow it down. Without a terminal, `nclean` prints a report and exits without deleting; `clean` requires either a terminal confirmation or explicit `--yes`. `--yes` is available only on `clean`. Confirmation defaults to **No**. Ctrl+C cancels prompts; Esc cancels selection.
+```sh
+npm install --global nclean
+```
 
-## What counts as inactive?
+## The experience
 
-A project has a regular `package.json` file. Its approximate last activity is the **newest** of:
+1. Discover projects in the current directory.
+2. Measure dependencies with a live progress bar.
+3. Select folders in a bordered, keyboard-driven list.
+4. Review the selection and confirm with **Yes**.
+5. See the measured space reclaimed and commands to restore dependencies.
 
-- Its latest Git commit affecting the project, if Git is available.
-- Modification times of `package.json` and lockfiles.
-- Modification times of relevant source and configuration files, including JS, TS, Vue, Svelte, Astro, stylesheets, Markdown, JSON, YAML, and Prisma files.
+Illustrative terminal excerpt; counts and sizes depend on your projects:
 
-nclean excludes dependencies, Git internals, and common generated directories such as `dist`, `build`, `.next`, and `coverage`. It also excludes nested projects from their parent's filesystem activity; each nested project is measured separately. Git history may conservatively keep a parent monorepo active.
+```text
+$ nclean --older-than 30
 
-This is an estimate, not a record of when you last opened your editor. A fresh clone or checkout may look active because its files have new timestamps. Reading files alone does not count as activity. `node_modules` timestamps never decide inactivity. If activity cannot be read reliably, nclean marks it **unknown** and excludes it from cleanup.
+  Scanning ~/Code...
 
-## Why dependencies can be removed
+  █████████████████████░░░░░░░░░░░  66%
 
-Dependencies include thousands of package files, compiled artifacts, and sometimes platform binaries. Every project can keep its own copy.
+  4/6 dependency folders measured
 
-For a typical project, the manifest and lockfile describe how to reinstall dependencies. Removing `node_modules` leaves those files and source code intact. Locally edited dependencies, unpublished packages, or manually placed files inside `node_modules` may not be recoverable by an install, so review your selection. Projects without a lockfile can still be cleaned, but reinstalling may resolve different versions.
+  7 projects scanned
+  6 dependency folders found
+  4 inactive projects
 
-## Package managers and restoration
+  4.0 MB reclaimable
 
-| Lockfile | Restore from the project directory |
+  Select dependencies to remove
+
+  ┌───────────────────────────────────────────────────────────────┐
+  │     Project                      Size   Inactive   PM         │
+  ├───────────────────────────────────────────────────────────────┤
+  │ › ● monorepo/apps/web          1.0 MB        70d   npm        │
+  │   ● shelf                      1.0 MB        47d   pnpm       │
+  │   ○ old-client                 1.0 MB        3mo   npm        │
+  │   ○ design-system              1.0 MB        60d   yarn       │
+  └───────────────────────────────────────────────────────────────┘
+
+  2 selected · 2.0 MB
+
+  [space] select     [a] all     [enter] clean     [esc] cancel
+```
+
+Use ↑/↓ to navigate. **Nothing is preselected.** Enter opens the final review; it does not immediately delete your selection. Confirmation defaults to **No**. Choose `y`, then press Enter to approve, or press Esc to cancel.
+
+During discovery, the bar moves without a percentage because the total is still unknown. Once discovery finishes, the percentage reflects completed dependency-folder measurements. Narrow terminals shorten paths and hide secondary columns.
+
+## Commands
+
+```sh
+nclean                              # Select dependencies in the current directory
+nclean scan                         # Report sizes and activity; never delete
+nclean --dry-run                    # Preview eligible folders without prompts
+nclean --older-than 30              # Show projects inactive for at least 30 days
+nclean clean --older-than 30        # Review and confirm cleanup of all matches
+nclean clean --older-than 30 --yes  # Explicitly authorize unattended cleanup
+nclean --verbose                    # Include detailed scan warnings
+nclean --help                       # Show usage and examples
+nclean --version                    # Show the installed version
+```
+
+Every scan or cleanup command accepts optional paths:
+
+```sh
+nclean scan ~/Projects
+nclean ~/Code ~/Work --older-than 60
+nclean clean ./archive --older-than 90 --dry-run
+nclean clean ./archive --older-than 90 --yes
+```
+
+| Option | Behavior |
+| --- | --- |
+| `--older-than <days>` | Include projects inactive for at least that many whole days. |
+| `--dry-run` | Preview only. No deletion, even with `--yes`. |
+| `--verbose` | Show full scan diagnostics and unreadable paths. |
+| `-y, --yes` | Skip confirmation on the explicit `clean` command only. |
+
+Options work before or after a subcommand. With no age filter, all known ages are eligible. In a noninteractive shell, the default command prints a report and deletes nothing; `clean` requires explicit `--yes` or a terminal confirmation.
+
+### Choose your scan scope
+
+The current working directory is the scan root. Run `nclean` inside one project to inspect that project and its workspaces; run it from `~/Code` to inspect projects beneath that directory. Running it from your home directory scans your home directory.
+
+Explicit paths can be absolute, relative, or home-relative (`~`). Overlapping roots are deduplicated. Filesystem roots and paths inside `node_modules` are rejected. Symlinked scan roots are rejected.
+
+### Partial scans
+
+Protected or unreadable folders are skipped, with a compact notice:
+
+```text
+  Partial scan · 12 folders skipped (12 access denied).
+  Use --verbose for details. Accessible projects are still shown.
+```
+
+Use `nclean scan --verbose` for the detailed paths. A partial scan does not claim your whole directory is clean. Unknown activity or unreadable size excludes a dependency folder from cleanup.
+
+## How inactivity works
+
+A project contains a regular `package.json`. nclean estimates its last activity using the **newest** of:
+
+- The latest Git commit affecting the project, when Git is available.
+- Manifest and lockfile modification times.
+- Relevant source and configuration modification times, including JS, TS, Vue, Svelte, Astro, styles, Markdown, JSON, YAML, and Prisma files.
+
+Dependency timestamps do not determine inactivity. Generated directories such as `dist`, `build`, `.next`, and `coverage`, along with `.git` internals, are excluded. Nested workspace projects are inspected separately; a parent's Git history can conservatively keep that parent active.
+
+This is an estimate. A fresh checkout may look active, while simply opening or reading a project does not update its activity. When activity cannot be read reliably, nclean marks it **unknown** and skips cleanup.
+
+## Restore dependencies
+
+Run the detected package manager's install command in the project directory. nclean groups the restore instructions after cleanup.
+
+| Lockfile | Restore command |
 | --- | --- |
 | `package-lock.json` / `npm-shrinkwrap.json` | `npm install` |
 | `pnpm-lock.yaml` | `pnpm install` |
@@ -113,67 +172,72 @@ For a typical project, the manifest and lockfile describe how to reinstall depen
 | `bun.lock` / `bun.lockb` | `bun install` |
 | No lockfile | `npm install` |
 
-If multiple lockfiles exist, detection prefers pnpm, yarn, bun, then npm. After cleanup, nclean groups removed projects by restore command. For workspaces, run the appropriate install command at the workspace root if required by your package manager.
+For a workspace, install at the workspace root when your package manager requires it. If multiple lockfiles exist, detection prefers pnpm, yarn, bun, then npm.
 
-## Safety and sizing
+## Safety
 
-- Only discovered, real `project/node_modules` directories can be deleted.
-- Project folders, manifests, lockfiles, source code, and `.git` are preserved.
-- Scanning and sizing never follow symbolic links or Windows directory junctions. Symlinked roots and symlinked dependency directories are skipped or rejected.
-- Root containment, parent directories, project manifest, and directory identity are checked again before removal.
-- `--dry-run` and `scan` never delete anything, even with `--yes`.
-- Unknown activity or failed sizing makes a directory ineligible. Errors are reported; other entries continue.
-- Nested workspace projects appear separately. Dependencies inside an already discovered `node_modules` are counted once within that tree.
-- Directory listings are streamed; at most four projects are measured concurrently. Git checks have a timeout.
+**Cleanup removes only discovered, real `project/node_modules` directories.** Project folders, source, manifests, lockfiles, and `.git` are preserved.
 
-Sizes use logical file bytes, skip symlinks, and count hard links once per dependency directory. The cleanup total is measured again immediately before each successful removal. **Physical free disk space may differ** because of allocation, compression, sparse files, shared hard links, and filesystem snapshots. This MVP does not claim an exact physical disk-space delta. Failed or partially completed removals are not included in the success total.
+- Interactive cleanup always requires final confirmation, defaulting to No.
+- `scan` and `--dry-run` never delete anything.
+- Scanning and sizing never follow symlinks or Windows directory junctions.
+- Root containment, parent directories, manifest, and directory identity are checked again before deletion.
+- Unreadable or unknown entries are excluded. Removal failures are reported while other selected entries continue.
+- Dependencies inside an already discovered `node_modules` are counted within that tree rather than reported again.
 
-Avoid changing or installing dependencies while a cleanup is running. Path checks reduce accidental deletion, but portable Node filesystem APIs cannot make path validation and recursive removal atomic against concurrent directory replacement.
+A normal project can reinstall dependencies from its manifest and lockfile. **Local edits or manually placed files inside `node_modules` may not be recoverable.** Without a lockfile, reinstalling may resolve different versions.
 
-Permission errors or failed removals return exit code `1`. Partial scan warnings also return `1`; normal reports, empty results, dry runs, and declined confirmation return `0`.
+Sizes are logical file bytes. Symlinks are skipped and hard links count once per dependency directory. Successful removals are measured again before deletion; failed or partial removals do not contribute to the success total. Physical free space can differ because of shared hard links, compression, allocation, sparse files, and snapshots.
+
+Avoid installing dependencies or replacing directories during cleanup. Portable Node APIs cannot make path checks and recursive removal atomic against concurrent directory replacement.
+
+Exit code `1` indicates scan warnings, invalid input, or cleanup failures. Normal reports, empty results, dry runs, and declined confirmation return `0`.
 
 ## Development
 
 ```sh
 npm install
-npm run dev -- --dry-run ~/Projects
+npm run dev -- --dry-run
 npm run build
 npm test
 npm run lint
 ```
 
-`npm run lint` runs strict TypeScript checking. Tests use isolated temporary directories and cover discovery, lockfiles, Git and filesystem activity, thresholds, sizes, symlink safety, cleanup boundaries, and CLI dry runs. The build emits ESM and type declarations into `dist/`.
+The source is strict TypeScript and ESM. Directory listings are streamed; up to four projects are measured concurrently. Git checks have a timeout. `lint` performs TypeScript checking; tests use isolated temporary directories to exercise discovery, activity, sizing, paths, symlinks, cleanup, prompts, progress, and diagnostics.
 
-The source is grouped into commands, scanning, cleanup, terminal UI, and small utilities. There is no configuration system or background service.
-
-For a repeatable demo using fake projects only:
-
-```sh
-npm run demo:setup
-# Copy the temporary directory printed by the script:
-node dist/cli.js scan <printed-path>
-node dist/cli.js <printed-path> --dry-run --older-than 30
-node dist/cli.js <printed-path> --older-than 30
-```
-
-## Contributing
-
-Small, focused improvements are welcome. Include a reproduction or temporary-directory test for bugs, keep deletion safety explicit, and run the build, tests, and type check before opening a pull request. Windows and Linux reports are especially useful. Cache cleaning and general system cleanup are outside this MVP's scope.
-
-## Publishing
-
-Before publishing, replace the `YOUR_USERNAME` repository placeholder in `package.json` with your actual repository and confirm npm name availability. This checkout has not been published.
+### Record a demo
 
 ```sh
 npm run build
+npm run demo:setup
+```
+
+The script creates fake projects in a fresh temporary directory, with npm, pnpm, yarn, bun, a nested project, and different activity ages. Each fake dependency folder contains 1 MB. Copy the printed directory, then:
+
+```sh
+cd <printed-directory>
+nclean --older-than 30
+```
+
+If you have not run `npm link`, use the absolute path to `dist/cli.js`. Run `npm run demo:setup` again for a fresh fixture after cleanup.
+
+### Contribute
+
+Keep changes focused on Node.js dependency cleanup. For bugs, include a reproduction or temporary-directory test. Run the build, tests, and type check before opening a pull request. Cross-platform testing reports are welcome.
+
+### Publish
+
+Replace the `YOUR_USERNAME` repository placeholder in `package.json` and confirm npm name availability before the first release. This checkout has not been published.
+
+```sh
 npm test
 npm run lint
 npm pack --dry-run
 npm publish
 ```
 
-Only compiled `dist/` files, this README, the MIT license, and npm package metadata ship. npm builds automatically before packing.
+Packing builds automatically. The package includes compiled `dist/` files, the README, the MIT license, and package metadata.
 
 ## License
 
-MIT — see [LICENSE](LICENSE).
+[MIT](LICENSE) © nclean contributors

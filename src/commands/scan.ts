@@ -7,10 +7,6 @@ import { startScanProgress } from '../ui/progress.js';
 import { scanDiagnostics } from '../ui/diagnostics.js';
 export async function scan(inputs: string[], options: Options): Promise<ScanResult> {
   const roots = await scanRoots(inputs);
-  if (!roots.length) {
-    message('CHOOSE A PROJECT DIRECTORY', 'No default project directories found.', 'Try: nclean ~/Projects');
-    return { projects: 0, entries: [], warnings: [] };
-  }
   scanning(roots);
   const progress = startScanProgress();
   let result: ScanResult;

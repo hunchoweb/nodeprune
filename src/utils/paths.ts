@@ -15,19 +15,15 @@ export function displayPath(value: string): string {
   return terminalText(within(home, value) ? `~${value.slice(home.length)}` : value);
 }
 export async function scanRoots(inputs: string[]): Promise<string[]> {
-  const explicit = inputs.length > 0;
-  const defaults = ['Projects', 'Code', 'Developer', 'dev'].map(name => path.join(os.homedir(), name));
   const roots: string[] = [];
-  for (const input of explicit ? inputs : defaults) {
+  for (const input of inputs.length ? inputs : [process.cwd()]) {
     const resolved = expandPath(input);
-    try {
-      const stat = await lstat(resolved);
-      if (!stat.isDirectory() || stat.isSymbolicLink()) throw new Error(`Scan root must be a real directory: ${displayPath(resolved)}`);
-      const canonical = await realpath(resolved);
-      if (canonical === path.parse(canonical).root) throw new Error('Scanning the filesystem root is not supported. Choose a project directory.');
-      if (canonical.split(path.sep).includes('node_modules')) throw new Error('Choose a project directory, not a directory inside node_modules.');
-      roots.push(canonical);
-    } catch (error) { if (explicit || (error as NodeJS.ErrnoException).code !== 'ENOENT') throw error; }
+    const stat = await lstat(resolved);
+    if (!stat.isDirectory() || stat.isSymbolicLink()) throw new Error(`Scan root must be a real directory: ${displayPath(resolved)}`);
+    const canonical = await realpath(resolved);
+    if (canonical === path.parse(canonical).root) throw new Error('Scanning the filesystem root is not supported. Choose a project directory.');
+    if (canonical.split(path.sep).includes('node_modules')) throw new Error('Choose a project directory, not a directory inside node_modules.');
+    roots.push(canonical);
   }
   return [...new Set(roots)].filter(root => !roots.some(other => other !== root && within(other, root)));
 }
