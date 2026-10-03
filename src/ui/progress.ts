@@ -17,15 +17,16 @@ export function progressPercent(state: ScanProgress): number | null {
   return state.phase === 'measurement' && state.total !== null && state.total > 0
     ? Math.floor(state.completed / state.total * 100) : null;
 }
-export function startScanProgress(): { update: (state: ScanProgress) => void; stop: () => void } {
-  let current: ScanProgress = { phase: 'discovery', projects: 0, folders: 0, completed: 0, total: null };
+interface ProgressView { percent: number | null; detail: (width: number) => string }
+function startProgress(initial: ProgressView): { update: (state: ProgressView) => void; stop: () => void } {
+  let current = initial;
   let frameKey = '';
   const spinner = ora({ indent: 2, color: 'cyan', isEnabled: Boolean(process.stderr.isTTY), isSilent: !process.stderr.isTTY });
-  const update = (state: ScanProgress): void => {
+  const update = (state: ProgressView): void => {
     current = state;
     const width = terminalWidth();
-    const percent = progressPercent(state);
-    const key = `${state.phase}:${width}:${percent}`;
+    const percent = state.percent;
+    const key = `${width}:${percent}`;
     if (key !== frameKey) {
       spinner.spinner = {
         interval: 180,
@@ -36,10 +37,7 @@ export function startScanProgress(): { update: (state: ScanProgress) => void; st
       frameKey = key;
     }
     const label = percent === null ? ' discovering' : ` ${pc.bold(`${percent}%`)}`;
-    const detail = state.phase === 'discovery'
-      ? (width < 48 ? `${state.projects} projects, ${state.folders} dirs` : `${state.projects} projects · ${state.folders} dependency folders`)
-      : `${state.completed}/${state.total} ${width < 48 ? 'measured' : 'dependency folders measured'}`;
-    spinner.text = `${label}\n\n  ${pc.dim(truncate(detail, width - 6))}`;
+    spinner.text = `${label}\n\n  ${pc.dim(truncate(state.detail(width), width - 6))}`;
   };
   update(current);
   spinner.start();
@@ -49,10 +47,28 @@ export function startScanProgress(): { update: (state: ScanProgress) => void; st
     update,
     stop: () => {
       process.stdout.off('resize', resize);
-      if (spinner.isSpinning && progressPercent(current) === 100) {
+      if (spinner.isSpinning && current.percent === 100) {
         spinner.stopAndPersist({ symbol: pc.cyan(progressBar(100, terminalWidth())), text: pc.bold('100%') });
       } else spinner.stop();
       if (process.stderr.isTTY) console.log();
     },
   };
+}
+export function startScanProgress(): { update: (state: ScanProgress) => void; stop: () => void } {
+  const view = (state: ScanProgress): ProgressView => ({
+    percent: progressPercent(state),
+    detail: width => state.phase === 'discovery'
+      ? (width < 48 ? `${state.projects} projects, ${state.folders} dirs` : `${state.projects} projects · ${state.folders} dependency folders`)
+      : `${state.completed}/${state.total} ${width < 48 ? 'measured' : 'dependency folders measured'}`,
+  });
+  const progress = startProgress(view({ phase: 'discovery', projects: 0, folders: 0, completed: 0, total: null }));
+  return { update: state => progress.update(view(state)), stop: progress.stop };
+}
+export function startCleanupProgress(total: number): { update: (completed: number, failed: number) => void; stop: () => void } {
+  const view = (completed: number, failed: number): ProgressView => ({
+    percent: total > 0 ? Math.floor(completed / total * 100) : 100,
+    detail: width => `${width < 48 ? 'Cleaning' : 'Cleaning dependencies'} · ${completed}/${total} processed${failed ? ` · ${failed} failed` : ''}`,
+  });
+  const progress = startProgress(view(0, 0));
+  return { update: (completed, failed) => progress.update(view(completed, failed)), stop: progress.stop };
 }
