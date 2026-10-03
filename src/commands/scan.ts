@@ -1,35 +1,39 @@
 import ora from 'ora';
 import type { Options, ScanResult } from '../types.js';
-import { scanRoots, displayPath } from '../utils/paths.js';
+import { scanRoots } from '../utils/paths.js';
 import { discover } from '../scanner/discover.js';
 import { oldEnough, terminalText } from '../utils/format.js';
+import { scanning, scanComplete, message, note } from '../ui/output.js';
+import { truncate, terminalWidth } from '../ui/layout.js';
+import { scanDiagnostics } from '../ui/diagnostics.js';
 export async function scan(inputs: string[], options: Options): Promise<ScanResult> {
   const roots = await scanRoots(inputs);
   if (!roots.length) {
-    console.log('No default project directories found.\n\nChoose a directory:\n  nclean ~/Projects');
+    message('CHOOSE A PROJECT DIRECTORY', 'No default project directories found.', 'Try: nclean ~/Projects');
     return { projects: 0, entries: [], warnings: [] };
   }
-  console.log(`Scanning ${roots.map(displayPath).join(', ')}...`);
-  const spinner = ora({ text: 'Discovering projects', isEnabled: Boolean(process.stderr.isTTY), isSilent: !process.stderr.isTTY }).start();
+  scanning(roots);
+  const spinner = ora({ text: truncate('Discovering projects...', terminalWidth() - 6), spinner: { interval: 300, frames: ['.', '..', '...'] }, color: 'gray', indent: 2, isEnabled: Boolean(process.stderr.isTTY), isSilent: !process.stderr.isTTY }).start();
   let result: ScanResult;
-  try { result = await discover(roots, message => { spinner.text = message; }); }
-  finally { spinner.stop(); }
-  console.log(`\nFound ${result.projects} Node.js projects\nFound ${result.entries.length} node_modules directories\n`);
-  for (const warning of result.warnings) console.error(`Warning: ${terminalText(warning)}`);
-  if (result.warnings.length) process.exitCode = 1;
-  if (!result.projects) console.log('No Node.js projects found.\n\nTry:\n  nclean ~/Projects');
-  else if (!result.entries.length) console.log('No node_modules directories found. Your machine is already clean.');
-  for (const entry of result.entries) {
-    if (entry.error) {
-      console.error(`Warning: ${displayPath(entry.path)}: ${terminalText(entry.error)}`);
-      process.exitCode = 1;
-    }
+  try { result = await discover(roots, value => { spinner.text = truncate(terminalText(value), terminalWidth() - 6); }); }
+  finally { spinner.stop(); if (process.stderr.isTTY) console.log(); }
+  const folderCount = result.entries.length;
+  const diagnostics = scanDiagnostics(result.warnings, result.entries, options.verbose);
+  if (diagnostics) {
+    console.error(diagnostics);
+    process.exitCode = 1;
   }
   if (options.olderThan !== undefined) {
     const unknown = result.entries.filter(entry => entry.lastActive === null).length;
     result.entries = result.entries.filter(entry => oldEnough(entry.lastActive, options.olderThan!));
-    if (unknown) console.log(`Skipped ${unknown} directories with unknown activity.`);
-    if (result.projects && !result.entries.length) console.log('No inactive node_modules found.\n\nTry:\n  nclean --older-than 7');
+    if (unknown) note(`Skipped ${unknown} ${unknown === 1 ? 'directory' : 'directories'} with unknown activity.`);
   }
+  scanComplete(result.projects, folderCount, result.entries, options.olderThan !== undefined);
+  if (!result.projects && result.warnings.length) message('SCAN INCOMPLETE', 'No Node.js projects found in the accessible folders.', 'Try a specific project directory: nclean ~/Projects');
+  else if (!result.projects) message('NO NODE PROJECTS FOUND', "We couldn't find any package.json files here.", 'Try: nclean ~/Projects');
+  else if (!folderCount && result.warnings.length) message('SCAN INCOMPLETE', 'No dependency folders found in the accessible projects.', 'Skipped folders could not be checked.');
+  else if (!folderCount) message('ALL CLEAN', 'No node_modules directories found.\nNothing to remove.');
+  else if (!result.entries.length && result.warnings.length) message('NO MATCHES IN SCANNED FOLDERS', 'No inactive node_modules found in the accessible projects.', 'Skipped folders could not be checked.');
+  else if (!result.entries.length) message('ALL CLEAN', 'No inactive node_modules found.\nNothing to remove.', 'Tip: try --older-than 7 to find recently inactive projects.');
   return result;
 }

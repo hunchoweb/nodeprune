@@ -159,14 +159,14 @@ test('CLI dry run, scan, invalid paths, threshold, refusal without confirmation 
   const cli = path.resolve('dist/cli.js');
   const run = (...args: string[]) => exec(process.execPath, [cli, ...args]);
   const dry = await run('clean', root, '--older-than', '30', '--yes', '--dry-run');
-  assert.match(dry.stdout, /Dry run: 1 directories eligible/);
+  assert.match(dry.stdout, /1 eligible directory/);
   assert.ok(await lstat(path.join(target, 'node_modules')));
   assert.match((await run('scan', root, '--older-than', '30')).stdout, /old/);
   await assert.rejects(run('clean', root, '--older-than', '30'), /Confirmation requires/);
   await assert.rejects(run('scan', path.join(root, 'missing')));
   await assert.rejects(run('--older-than', '-1'), /whole number/);
   assert.match((await run(root)).stdout, /Nothing was deleted/);
-  assert.match((await run('clean', root, '--older-than', '30', '--yes')).stdout, /Removed 1 node_modules directories/);
+  assert.match((await run('clean', root, '--older-than', '30', '--yes')).stdout, /1 node_modules removed/);
   assert.ok(await lstat(path.join(root, 'active', 'node_modules')));
   assert.ok(await lstat(path.join(target, 'package.json')));
 });
@@ -197,4 +197,25 @@ test('permission failures produce unknown sizes and cleanup continues with other
   await assert.rejects(removeCandidate(entry));
   assert.equal(result.entries.find(entry => entry.project !== blocked)!.bytes, 5);
   await chmod(folder, 0o755);
+});
+
+test('CLI summarizes permission warnings by default and exposes details with --verbose', async t => {
+  if (process.platform === 'win32' || process.getuid?.() === 0) { t.skip('POSIX permissions require an unprivileged user'); return; }
+  const root = await fixture(t);
+  const blocked = path.join(root, 'blocked-private-folder');
+  await mkdir(blocked);
+  await chmod(blocked, 0);
+  try {
+    for (const verbose of [false, true]) {
+      await assert.rejects(exec(process.execPath, [path.resolve('dist/cli.js'), 'scan', root, ...(verbose ? ['--verbose'] : [])]), error => {
+        const result = error as Error & { code: number; stdout: string; stderr: string };
+        assert.equal(result.code, 1);
+        assert.match(result.stderr, /Partial scan/);
+        assert.match(result.stderr, /1 folder skipped/);
+        assert.match(result.stdout, /Scan incomplete/);
+        assert.equal(result.stderr.includes('blocked-private-folder'), verbose);
+        return true;
+      });
+    }
+  } finally { await chmod(blocked, 0o755); }
 });

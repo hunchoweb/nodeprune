@@ -11,4 +11,4 @@ export interface Candidate {
   error: string | null;
 }
 export interface ScanResult { projects: number; entries: Candidate[]; warnings: string[] }
-export interface Options { olderThan?: number; dryRun?: boolean; yes?: boolean }
+export interface Options { olderThan?: number; dryRun?: boolean; yes?: boolean; verbose?: boolean }

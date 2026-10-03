@@ -3,7 +3,7 @@ export function formatSize(bytes: number): string {
   const units = ['B', 'KB', 'MB', 'GB', 'TB', 'PB'];
   let i = 0;
   while (bytes >= 1024 && i < units.length - 1) { bytes /= 1024; i++; }
-  return `${bytes < 10 && i > 0 ? bytes.toFixed(1) : Math.round(bytes)} ${units[i]}`;
+  return `${bytes < 100 && i > 0 ? bytes.toFixed(1) : Math.round(bytes)} ${units[i]}`;
 }
 export function formatAge(time: number | null, now = Date.now()): string {
   if (time === null) return 'unknown';
