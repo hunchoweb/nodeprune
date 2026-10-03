@@ -1,11 +1,11 @@
 import { opendir, lstat } from 'node:fs/promises';
 import path from 'node:path';
-import type { Candidate, ScanResult } from '../types.js';
+import type { Candidate, ScanResult, ScanProgress } from '../types.js';
 import { detectManager } from '../utils/package-manager.js';
 import { errorMessage } from '../utils/format.js';
 import { ignored, lastActivity } from './activity.js';
 import { directorySize } from './size.js';
-export async function discover(roots: string[], progress: (message: string) => void = () => {}): Promise<ScanResult> {
+export async function discover(roots: string[], progress: (message: string, state: ScanProgress) => void = () => {}): Promise<ScanResult> {
   const result: ScanResult = { projects: 0, entries: [], warnings: [] };
   async function walk(folder: string, root: string): Promise<void> {
     try {
@@ -21,7 +21,7 @@ export async function discover(roots: string[], progress: (message: string) => v
           else if (stat.isDirectory()) result.entries.push({ project: folder, path: modules, root, manager: 'npm', lastActive: null, bytes: null, device: stat.dev, inode: stat.ino, error: null });
         } catch (error) { if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error; }
       }
-      progress(`Discovering projects · ${result.projects} found`);
+      progress(`Discovering projects · ${result.projects} found`, { phase: 'discovery', projects: result.projects, folders: result.entries.length, completed: 0, total: null });
       for await (const entry of await opendir(folder)) {
         if (entry.isDirectory() && !entry.isSymbolicLink() && !ignored.has(entry.name)) await walk(path.join(folder, entry.name), root);
       }
@@ -29,6 +29,7 @@ export async function discover(roots: string[], progress: (message: string) => v
   }
   for (const root of roots) await walk(root, root);
   let next = 0, complete = 0;
+  progress('Measuring dependencies', { phase: 'measurement', projects: result.projects, folders: result.entries.length, completed: 0, total: result.entries.length });
   async function worker(): Promise<void> {
     while (next < result.entries.length) {
       const entry = result.entries[next++]!;
@@ -37,7 +38,7 @@ export async function discover(roots: string[], progress: (message: string) => v
         entry.lastActive = await lastActivity(entry.project);
         entry.bytes = await directorySize(entry.path);
       } catch (error) { entry.error = errorMessage(error); }
-      progress(`Measuring dependencies · ${++complete}/${result.entries.length}`);
+      progress(`Measuring dependencies · ${++complete}/${result.entries.length}`, { phase: 'measurement', projects: result.projects, folders: result.entries.length, completed: complete, total: result.entries.length });
     }
   }
   await Promise.all(Array.from({ length: Math.min(4, result.entries.length) }, worker));

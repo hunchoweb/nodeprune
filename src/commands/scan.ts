@@ -1,10 +1,9 @@
-import ora from 'ora';
 import type { Options, ScanResult } from '../types.js';
 import { scanRoots } from '../utils/paths.js';
 import { discover } from '../scanner/discover.js';
-import { oldEnough, terminalText } from '../utils/format.js';
+import { oldEnough } from '../utils/format.js';
 import { scanning, scanComplete, message, note } from '../ui/output.js';
-import { truncate, terminalWidth } from '../ui/layout.js';
+import { startScanProgress } from '../ui/progress.js';
 import { scanDiagnostics } from '../ui/diagnostics.js';
 export async function scan(inputs: string[], options: Options): Promise<ScanResult> {
   const roots = await scanRoots(inputs);
@@ -13,10 +12,10 @@ export async function scan(inputs: string[], options: Options): Promise<ScanResu
     return { projects: 0, entries: [], warnings: [] };
   }
   scanning(roots);
-  const spinner = ora({ text: truncate('Discovering projects...', terminalWidth() - 6), spinner: { interval: 300, frames: ['.', '..', '...'] }, color: 'gray', indent: 2, isEnabled: Boolean(process.stderr.isTTY), isSilent: !process.stderr.isTTY }).start();
+  const progress = startScanProgress();
   let result: ScanResult;
-  try { result = await discover(roots, value => { spinner.text = truncate(terminalText(value), terminalWidth() - 6); }); }
-  finally { spinner.stop(); if (process.stderr.isTTY) console.log(); }
+  try { result = await discover(roots, (_message, state) => progress.update(state)); }
+  finally { progress.stop(); }
   const folderCount = result.entries.length;
   const diagnostics = scanDiagnostics(result.warnings, result.entries, options.verbose);
   if (diagnostics) {

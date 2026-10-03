@@ -12,3 +12,11 @@ export interface Candidate {
 }
 export interface ScanResult { projects: number; entries: Candidate[]; warnings: string[] }
 export interface Options { olderThan?: number; dryRun?: boolean; yes?: boolean; verbose?: boolean }
+
+export interface ScanProgress {
+  phase: 'discovery' | 'measurement';
+  projects: number;
+  folders: number;
+  completed: number;
+  total: number | null;
+}

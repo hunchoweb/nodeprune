@@ -144,3 +144,19 @@ test('hundreds of scan warnings collapse to a short notice; verbose preserves de
   assert.match(detail, /input\/output error/);
   assert.equal(scanDiagnostics([], []), '');
 });
+
+test('scan bar reports measured progress and keeps discovery indeterminate', async () => {
+  const { progressBar, progressPercent } = await import('../src/ui/progress.js');
+  const discovery = { phase: 'discovery' as const, projects: 12, folders: 8, completed: 0, total: null };
+  assert.equal(progressPercent(discovery), null);
+  assert.equal(progressPercent({ ...discovery, phase: 'measurement', completed: 7, total: 9 }), 77);
+  assert.equal(progressPercent({ ...discovery, phase: 'measurement', completed: 9, total: 9 }), 100);
+  assert.notEqual(progressBar(null, 80, 0), progressBar(null, 80, 5));
+  assert.match(progressBar(0), /^░+$/);
+  assert.match(progressBar(100), /^█+$/);
+  assert.ok(progressBar(78).includes('█') && progressBar(78).includes('░'));
+  for (const width of [24, 40, 80, 100]) {
+    assert.ok(stringWidth(progressBar(null, width)) + ' discovering'.length + 4 < width);
+    assert.ok(stringWidth(progressBar(78, width)) + ' 78%'.length + 4 < width);
+  }
+});
