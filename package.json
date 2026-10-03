@@ -1,0 +1,50 @@
+{
+  "name": "nclean",
+  "version": "0.1.0",
+  "description": "Clean up forgotten Node.js dependencies.",
+  "type": "module",
+  "bin": {
+    "nclean": "./dist/cli.js"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "dev": "node --import tsx src/cli.ts",
+    "build": "tsc",
+    "test": "npm run build && node --import tsx --test test/*.test.ts",
+    "lint": "tsc --noEmit",
+    "prepack": "npm run build",
+    "demo:setup": "node scripts/demo.mjs"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/YOUR_USERNAME/nclean.git"
+  },
+  "keywords": [
+    "cli",
+    "node_modules",
+    "cleanup",
+    "disk-space",
+    "node",
+    "npm",
+    "pnpm"
+  ],
+  "license": "MIT",
+  "dependencies": {
+    "@inquirer/prompts": "^7.8.0",
+    "commander": "^14.0.0",
+    "ora": "^8.2.0",
+    "picocolors": "^1.1.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "tsx": "^4.20.0",
+    "typescript": "^5.9.0"
+  }
+}
