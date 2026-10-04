@@ -50,7 +50,7 @@ Update to the latest release:
 npm install --global nclean
 ```
 
-The first npm release is being prepared; these registry commands become available once it is published. To try the source checkout now, follow [Development](#development).
+To build from source or contribute, follow [Development](#development).
 
 ## The experience
 

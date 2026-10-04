@@ -4,7 +4,7 @@
   "description": "Clean up forgotten Node.js dependencies.",
   "type": "module",
   "bin": {
-    "nclean": "./dist/cli.js"
+    "nclean": "dist/cli.js"
   },
   "files": [
     "dist",
