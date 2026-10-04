@@ -27,7 +27,7 @@ Built with TypeScript for Node.js 22+ · macOS / Linux / Windows · MIT
 Install with npm (Node.js 22 or newer):
 
 ```sh
-npm install --global nclean
+npm install --global @hunchoweb/nclean
 ```
 
 Then go to a project or the directory that holds your projects:
@@ -47,7 +47,7 @@ nclean ~/Code ~/Work
 Update to the latest release:
 
 ```sh
-npm install --global nclean
+npm install --global @hunchoweb/nclean
 ```
 
 To build from source or contribute, follow [Development](#development).
@@ -226,12 +226,12 @@ Keep changes focused on Node.js dependency cleanup. For bugs, include a reproduc
 
 ### Publish
 
-Maintainers publish a public package to the npm registry. Before the first release, confirm the package name is available and sign in with the npm account that will own it:
+Maintainers publish `@hunchoweb/nclean` as a public package to the npm registry. The executable remains `nclean`. Sign in with an npm account that has publishing access:
 
 ```sh
 npm login --registry=https://registry.npmjs.org/
 npm whoami
-npm view nclean name version
+npm view @hunchoweb/nclean name version
 npm pack --dry-run
 npm publish --access public
 ```
