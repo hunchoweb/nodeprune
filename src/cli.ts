@@ -11,7 +11,7 @@ function days(value: string): number {
 }
 const program = new Command();
 program.configureHelp({ showGlobalOptions: true });
-program.name('nclean').description('Clean up forgotten Node.js dependencies.').version('0.1.0')
+program.name('nclean').description('Clean up forgotten Node.js dependencies.').version('0.1.1')
   .argument('[paths...]', 'Directories to scan (default: current directory)')
   .option('--older-than <days>', 'Only include projects inactive for at least this many days', days)
   .option('--dry-run', 'Preview candidates; never delete anything')

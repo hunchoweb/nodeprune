@@ -135,6 +135,21 @@ The current working directory is the scan root. Run `nclean` inside one project 
 
 Explicit paths can be absolute, relative, or home-relative (`~`). Overlapping roots are deduplicated. Filesystem roots and paths inside `node_modules` are rejected. Symlinked scan roots are rejected.
 
+### Projects, not installed tools
+
+The exclusions below are included in **0.1.1 and newer**. Users of 0.1.0 should update before scanning broad directories:
+
+```sh
+npm install --global @hunchoweb/nclean@latest
+nclean --version
+```
+
+nclean excludes hidden directories (including `.vscode`, `.cursor`, `.npm`, `.nvm`, `.cranq`, and generated `.next` folders), application bundles, operating-system application/data directories such as `Library` and `AppData`, and generated trees such as `dist`, `build`, `coverage`, and `vendor`. These exclusions apply to the full directory path, including ancestors of an explicitly selected scan root, and are checked again before deletion. `--yes` does not override them.
+
+A source project for a VS Code extension can still be cleaned when it lives in an ordinary project directory. An installed copy beneath `.vscode/extensions` cannot. Projects stored in hidden or excluded directories are intentionally ineligible; move source projects to an ordinary project directory to use nclean.
+
+A `package.json` identifies a Node.js package, but cannot prove it is a project you personally worked on. These exclusions protect known tool locations; custom installations in ordinary folders may still look like projects. Review the selection and scope scans to your source directories, such as `~/Code` or `~/Projects`.
+
 ### Partial scans
 
 Protected or unreadable folders are skipped, with a compact notice:
@@ -177,6 +192,7 @@ For a workspace, install at the workspace root when your package manager require
 **Cleanup removes only discovered, real `project/node_modules` directories.** Project folders, source, manifests, lockfiles, and `.git` are preserved.
 
 - Interactive cleanup always requires final confirmation, defaulting to No.
+- Hidden folders, installed-tool locations, app bundles, and generated trees are excluded, including when selected directly or with `--yes`.
 - `scan` and `--dry-run` never delete anything.
 - Scanning and sizing never follow symlinks or Windows directory junctions.
 - Root containment, parent directories, manifest, and directory identity are checked again before deletion.

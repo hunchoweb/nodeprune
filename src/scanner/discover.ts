@@ -5,6 +5,7 @@ import { detectManager } from '../utils/package-manager.js';
 import { errorMessage } from '../utils/format.js';
 import { ignored, lastActivity } from './activity.js';
 import { directorySize } from './size.js';
+import { assertProjectScope, projectScopeReason } from '../utils/project-scope.js';
 export async function discover(roots: string[], progress: (message: string, state: ScanProgress) => void = () => {}): Promise<ScanResult> {
   const result: ScanResult = { projects: 0, entries: [], warnings: [] };
   async function walk(folder: string, root: string): Promise<void> {
@@ -23,11 +24,11 @@ export async function discover(roots: string[], progress: (message: string, stat
       }
       progress(`Discovering projects · ${result.projects} found`, { phase: 'discovery', projects: result.projects, folders: result.entries.length, completed: 0, total: null });
       for await (const entry of await opendir(folder)) {
-        if (entry.isDirectory() && !entry.isSymbolicLink() && !ignored.has(entry.name)) await walk(path.join(folder, entry.name), root);
+        if (entry.isDirectory() && !entry.isSymbolicLink() && !ignored.has(entry.name) && !projectScopeReason(path.join(folder, entry.name))) await walk(path.join(folder, entry.name), root);
       }
     } catch (error) { result.warnings.push(`${folder}: ${errorMessage(error)}`); }
   }
-  for (const root of roots) await walk(root, root);
+  for (const root of roots) { assertProjectScope(root); await walk(root, root); }
   let next = 0, complete = 0;
   progress('Measuring dependencies', { phase: 'measurement', projects: result.projects, folders: result.entries.length, completed: 0, total: result.entries.length });
   async function worker(): Promise<void> {

@@ -3,8 +3,10 @@ import path from 'node:path';
 import type { Candidate } from '../types.js';
 import { assertRealPath } from '../utils/paths.js';
 import { directorySize } from '../scanner/size.js';
+import { assertProjectScope } from '../utils/project-scope.js';
 export async function removeCandidate(entry: Candidate, dryRun = false): Promise<number> {
   if (path.basename(entry.path) !== 'node_modules' || path.dirname(entry.path) !== entry.project) throw new Error('Refusing to remove anything except project/node_modules.');
+  assertProjectScope(entry.project);
   if (entry.bytes === null || entry.error || entry.lastActive === null) throw new Error('Size or activity is unknown; refusing cleanup.');
   await assertRealPath(entry.root, entry.path);
   const manifest = await lstat(path.join(entry.project, 'package.json'));
@@ -16,6 +18,7 @@ export async function removeCandidate(entry: Candidate, dryRun = false): Promise
   await assertRealPath(entry.root, entry.path);
   const latest = await lstat(entry.path);
   if (latest.dev !== entry.device || latest.ino !== entry.inode) throw new Error('node_modules changed before cleanup.');
+  assertProjectScope(entry.project);
   await rm(entry.path, { recursive: true, force: false, maxRetries: 2 });
   return measured;
 }

@@ -51,6 +51,54 @@ test('detect projects, all package managers, nested projects, and prune dependen
   assert.equal(result.entries.length, 7);
   assert.equal(result.warnings.length, 0);
 });
+test('project discovery excludes installed tools, hidden folders, caches and generated trees', async t => {
+  const root = await fixture(t);
+  const protectedProjects = [
+    '.vscode/extensions/esbenp.prettier-vscode', '.cursor/extensions/vue.volar/out/client',
+    '.npm/_npx/example', '.nvm/test/project', '.cranq/runtime',
+    'Library/Caches/com.microsoft.VSCode/Visual Studio Code.app/Contents/Resources/app',
+    'AppData/Local/tool', 'Applications/Editor.app/Contents/Resources/app',
+    'downloads/Editor.app/Contents/Resources/app', 'tools/Editor.framework/runtime',
+    'workspace/dist/generated', 'workspace/build/generated', 'workspace/vendor/tool',
+    'workspace/.next-demo', '.hidden-project',
+  ];
+  for (const name of protectedProjects) await project(root, name);
+  const normal = await project(root, 'Projects/client');
+  const workspace = await project(root, 'workspace');
+  const nested = await project(workspace, 'packages/ui');
+  const extensionSource = await project(root, 'my-vscode-extension');
+  await writeFile(path.join(extensionSource, 'package.json'), JSON.stringify({ engines: { vscode: '*' } }));
+  const result = await discover([root]);
+  assert.equal(result.projects, 4);
+  assert.deepEqual(new Set(result.entries.map(entry => entry.project)), new Set([normal, workspace, nested, extensionSource]));
+  assert.deepEqual(result.warnings, []);
+  // Pruning must not modify any installed tool's files.
+  for (const name of protectedProjects) assert.ok((await lstat(path.join(root, name, 'node_modules/dependency/index.js'))).isFile());
+});
+test('protected projects cannot bypass exclusions through explicit roots or cleanup candidates', async t => {
+  const root = await fixture(t);
+  const safe = await project(root, 'client');
+  const entry = (await discover([safe])).entries[0]!;
+  for (const name of ['.vscode/extensions/tool', '.cursor/extensions/tool', '.cranq/runtime', 'Library/Caches/tool', 'downloads/Editor.app/runtime', 'workspace/.next-demo', 'AppData/Local/tool', 'workspace/dist/generated']) {
+    const target = await project(root, name);
+    await assert.rejects(scanRoots([target]), /Choose a source project directory/);
+    await assert.rejects(discover([target]), /Choose a source project directory/);
+    const modules = path.join(target, 'node_modules');
+    const stat = await lstat(modules);
+    const candidate = { ...entry, root: target, project: target, path: modules, device: stat.dev, inode: stat.ino };
+    await assert.rejects(removeCandidate(candidate), /Refusing project cleanup/);
+    await assert.rejects(removeCandidate(candidate, true), /Refusing project cleanup/);
+    assert.ok((await lstat(path.join(modules, 'dependency/index.js'))).isFile());
+  }
+  const protectedRoot = path.join(root, '.vscode/extensions/tool');
+  const cli = path.resolve('dist/cli.js');
+  for (const args of [['scan', protectedRoot], ['clean', protectedRoot, '--yes'], ['clean', '--yes']]) {
+    await assert.rejects(exec(process.execPath, [cli, ...args], { cwd: protectedRoot }), error => {
+      assert.match((error as { stderr: string }).stderr, /Choose a source project directory/);
+      return true;
+    });
+  }
+});
 test('activity uses source, manifests and lockfiles; node_modules is excluded', async t => {
   const root = await fixture(t);
   const target = await project(root, 'old');

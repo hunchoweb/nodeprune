@@ -2,6 +2,7 @@ import { opendir, lstat } from 'node:fs/promises';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import path from 'node:path';
+import { projectScopeReason } from '../utils/project-scope.js';
 const exec = promisify(execFile);
 export const ignored = new Set(['node_modules', '.git', '.next', '.nuxt', '.cache', '.turbo', 'dist', 'build', 'coverage', 'vendor']);
 const relevant = /\.(?:[cm]?[jt]sx?|vue|svelte|astro|json|ya?ml|toml|html|css|scss|md|graphql|prisma)$/i;
@@ -19,6 +20,7 @@ export async function lastActivity(project: string): Promise<number | null> {
       if (entry.isSymbolicLink() || ignored.has(entry.name)) continue;
       const target = path.join(folder, entry.name);
       if (entry.isDirectory()) {
+        if (projectScopeReason(target)) continue;
         // Nested projects have their own activity signals.
         try { if ((await lstat(path.join(target, 'package.json'))).isFile()) continue; }
         catch (error) { if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error; }

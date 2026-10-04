@@ -1,6 +1,6 @@
 {
   "name": "@hunchoweb/nclean",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Clean up forgotten Node.js dependencies.",
   "type": "module",
   "bin": {

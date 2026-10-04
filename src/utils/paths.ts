@@ -2,6 +2,7 @@ import path from 'node:path';
 import os from 'node:os';
 import { lstat, realpath } from 'node:fs/promises';
 import { terminalText } from './format.js';
+import { assertProjectScope } from './project-scope.js';
 export function expandPath(input: string): string {
   if (input === '~') return os.homedir();
   return path.resolve(input.startsWith('~/') || input.startsWith('~\\') ? path.join(os.homedir(), input.slice(2)) : input);
@@ -23,6 +24,7 @@ export async function scanRoots(inputs: string[]): Promise<string[]> {
     const canonical = await realpath(resolved);
     if (canonical === path.parse(canonical).root) throw new Error('Scanning the filesystem root is not supported. Choose a project directory.');
     if (canonical.split(path.sep).includes('node_modules')) throw new Error('Choose a project directory, not a directory inside node_modules.');
+    assertProjectScope(canonical);
     roots.push(canonical);
   }
   return [...new Set(roots)].filter(root => !roots.some(other => other !== root && within(other, root)));
