@@ -24,12 +24,10 @@ Built with TypeScript for Node.js 22+ · macOS / Linux / Windows · MIT
 
 ## Quick start
 
-From a checkout of this repository:
+Install with npm (Node.js 22 or newer):
 
 ```sh
-npm install
-npm run build
-npm link
+npm install --global nclean
 ```
 
 Then go to a project or the directory that holds your projects:
@@ -46,13 +44,13 @@ nclean ~/Projects
 nclean ~/Code ~/Work
 ```
 
-Without a global link, use `node /path/to/nclean/dist/cli.js` from the directory you want to scan. `npm run dev` runs the TypeScript source from this checkout.
-
-After the first npm release, installation will also be available with:
+Update to the latest release:
 
 ```sh
 npm install --global nclean
 ```
+
+The first npm release is being prepared; these registry commands become available once it is published. To try the source checkout now, follow [Development](#development).
 
 ## The experience
 
@@ -199,6 +197,7 @@ Exit code `1` indicates scan warnings, invalid input, or cleanup failures. Norma
 npm install
 npm run dev -- --dry-run
 npm run build
+npm link
 npm test
 npm run lint
 ```
@@ -227,16 +226,19 @@ Keep changes focused on Node.js dependency cleanup. For bugs, include a reproduc
 
 ### Publish
 
-Replace the `YOUR_USERNAME` repository placeholder in `package.json` and confirm npm name availability before the first release. This checkout has not been published.
+Maintainers publish a public package to the npm registry. Before the first release, confirm the package name is available and sign in with the npm account that will own it:
 
 ```sh
-npm test
-npm run lint
+npm login --registry=https://registry.npmjs.org/
+npm whoami
+npm view nclean name version
 npm pack --dry-run
-npm publish
+npm publish --access public
 ```
 
-Packing builds automatically. The package includes compiled `dist/` files, the README, the MIT license, and package metadata.
+An `E404` from the name lookup means no public package was found; npm decides whether the name can be claimed when publishing. Publishing runs the tests and type check, and packing builds automatically. Complete npm's authentication and two-factor prompts when requested.
+
+The package includes compiled `dist/` files, the README, the MIT license, and package metadata. Runtime dependencies are installed by npm; users do not need TypeScript or a repository checkout. Test the packed tarball in an isolated install before releasing. For subsequent releases, bump the package version and CLI version together; npm does not allow reusing a published version.
 
 ## License
 

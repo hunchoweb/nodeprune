@@ -20,11 +20,20 @@
     "test": "npm run build && node --import tsx --test test/*.test.ts",
     "lint": "tsc --noEmit",
     "prepack": "npm run build",
+    "prepublishOnly": "npm test && npm run lint",
     "demo:setup": "node scripts/demo.mjs"
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/YOUR_USERNAME/nclean.git"
+    "url": "git+https://github.com/hunchoweb/nodeprune.git"
+  },
+  "homepage": "https://github.com/hunchoweb/nodeprune#readme",
+  "bugs": {
+    "url": "https://github.com/hunchoweb/nodeprune/issues"
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
   },
   "keywords": [
     "cli",
